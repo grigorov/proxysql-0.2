@@ -60,16 +60,16 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 #_OBJ_CPP = ProxySQL_GloVars.oo network.oo debug.oo proxysql_global.oo configfile.oo Standard_Query_Cache.oo SpookyV2.oo Standard_MySQL_Thread.oo Standard_MySQL_Authentication.oo gen_utils.oo mysql_connection_pool.oo simple_kv.oo advanced_kv.oo sqlite3db.oo mysql_connection.oo global_variables.oo proxysql_mem.oo MySQL_Protocol.oo mysql_data_stream.oo mysql_session.oo mysql_backend.oo
 #_OBJ_CPP = ProxySQL_GloVars.oo network.oo debug.oo proxysql_global.oo configfile.oo Standard_Query_Cache.oo SpookyV2.oo Standard_MySQL_Authentication.oo gen_utils.oo mysql_connection_pool.oo simple_kv.oo advanced_kv.oo sqlite3db.oo mysql_connection.oo global_variables.oo proxysql_mem.oo MySQL_Protocol.oo mysql_data_stream.oo mysql_session.oo mysql_backend.oo
 #_OBJ_CPP = ProxySQL_GloVars.oo network.oo debug.oo configfile.oo Standard_Query_Cache.oo SpookyV2.oo Standard_MySQL_Authentication.oo gen_utils.oo mysql_connection_pool.oo simple_kv.oo advanced_kv.oo sqlite3db.oo mysql_connection.oo global_variables.oo proxysql_mem.oo MySQL_Protocol.oo mysql_data_stream.oo MySQL_Session.oo mysql_backend.oo MySQL_HostGroups_Manager.oo
-_OBJ_CPP = ProxySQL_GloVars.oo network.oo debug.oo configfile.oo Standard_Query_Cache.oo SpookyV2.oo Standard_MySQL_Authentication.oo gen_utils.oo simple_kv.oo sqlite3db.oo global_variables.oo proxysql_mem.oo mysql_connection.oo MySQL_HostGroups_Manager.oo mysql_data_stream.oo
+_OBJ_CPP = ProxySQL_GloVars.oo network.oo debug.oo configfile.oo Standard_Query_Cache.oo SpookyV2.oo Standard_MySQL_Authentication.oo gen_utils.oo simple_kv.oo sqlite3db.oo global_variables.oo proxysql_mem.oo MySQL_Connection.oo MySQL_HostGroups_Manager.oo mysql_data_stream.oo
 OBJ_CPP = $(patsubst %,$(ODIR)/%,$(_OBJ_CPP))
 
 #_SHARED_OBJ= Standard_Query_Cache.ko Standard_MySQL_Thread.ko
 
-Standard_MySQL_Thread.so: Standard_MySQL_Thread.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp mysql_connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a
-	$(CPP) -shared -fPIC -o $@ $(CPPFLAGS) Standard_MySQL_Thread.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp mysql_connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a -lcrypto $(LIBS)
+Standard_MySQL_Thread.so: Standard_MySQL_Thread.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp MySQL_Connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a
+	$(CPP) -shared -fPIC -o $@ $(CPPFLAGS) Standard_MySQL_Thread.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp MySQL_Connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a -lcrypto $(LIBS)
 
-Standard_ProxySQL_Admin.so: Standard_ProxySQL_Admin.cpp Standard_MySQL_Thread.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp mysql_connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a
-	$(CPP) -shared -fPIC -o $@ $(CPPFLAGS) Standard_MySQL_Thread.cpp Standard_ProxySQL_Admin.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp mysql_connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a -lcrypto $(LIBS)
+Standard_ProxySQL_Admin.so: Standard_ProxySQL_Admin.cpp Standard_MySQL_Thread.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp MySQL_Connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a
+	$(CPP) -shared -fPIC -o $@ $(CPPFLAGS) Standard_MySQL_Thread.cpp Standard_ProxySQL_Admin.cpp MySQL_Protocol.cpp mysql_data_stream.cpp MySQL_Session.cpp mysql_backend.cpp MySQL_Connection.cpp MySQL_HostGroups_Manager.cpp libproxysql.a -lcrypto $(LIBS)
 
 #Standard_ProxySQL_Admin.so: Standard_ProxySQL_Admin.ko Standard_MySQL_Thread.ko libproxysql.a
 #	$(CPP) -shared -fPIC -o $@ $(CPPFLAGS) Standard_ProxySQL_Admin.ko Standard_MySQL_Thread.ko libproxysql.a -lcrypto $(LIBS)

@@ -110,6 +110,9 @@ MySQL_Connection::MySQL_Connection() {
 	parent=NULL;
 	userinfo=new MySQL_Connection_userinfo();
 	fd=-1;
+	mysql=NULL;
+	mysql_ret=NULL;
+	mysql_status=0;
 	status_flags=0;
 	options.compression_min_length=0;
 	options.server_version=NULL;
@@ -131,6 +134,8 @@ MySQL_Connection::~MySQL_Connection() {
 		shutdown(fd, SHUT_RDWR);
 		close(fd);
 	}
+	// TODO:
+	// destroy mysql object
 };
 
 uint8_t MySQL_Connection::set_charset(uint8_t _c) {

@@ -788,13 +788,21 @@ void Standard_MySQL_Thread::run() {
 		for (n = 0; n < mypolls.len; n++) {
 			mypolls.fds[n].revents=0;
 			if (mypolls.myds[n] && mypolls.myds[n]->myds_type!=MYDS_LISTENER && mypolls.myds[n]->myds_type!=MYDS_BACKEND_PAUSE_CONNECT) {
-				mypolls.myds[n]->set_pollout();
+				if (mypolls.myds[n]->DSS > STATE_MARIADB_BEGIN && mypolls.myds[n]->DSS < STATE_MARIADB_END) {
+					mypolls.fds[n].events = POLLIN;
+					if (mypolls.myds[n]->myconn->mysql_status & MYSQL_WAIT_WRITE)
+						mypolls.fds[n].events |= POLLOUT;
+				} else {
+					mypolls.myds[n]->set_pollout();
+				}
 			}
 		}
 
 	
 		spin_wrunlock(&thread_mutex);
 
+
+		// add listeners
 		while ((n=__sync_add_and_fetch(&mypolls.pending_listener_add,0))) {	// spin here
 			poll_listener_add(n);
 			assert(__sync_bool_compare_and_swap(&mypolls.pending_listener_add,n,0));
@@ -803,7 +811,7 @@ void Standard_MySQL_Thread::run() {
 //			}
 		}	
 
-
+		// remove listeners
 		while ((n=__sync_add_and_fetch(&mypolls.pending_listener_del,0))) {	// spin here
 			poll_listener_del(n);
 			assert(__sync_bool_compare_and_swap(&mypolls.pending_listener_del,n,0));
@@ -838,7 +846,7 @@ void Standard_MySQL_Thread::run() {
 				exit(EXIT_FAILURE);
 			}
 
-
+		// update mysql variables if needed
 		if (__sync_add_and_fetch(&__global_MySQL_Thread_Variables_version,0) > __thread_MySQL_Thread_Variables_version) {
 			refresh_variables();
 		}
@@ -852,6 +860,7 @@ void Standard_MySQL_Thread::run() {
 
 			MySQL_Data_Stream *myds=mypolls.myds[n];
 			if (myds==NULL) {
+				// if there is no data stream it is a signal from Admin
 				if (mypolls.fds[n].revents) {
 					char c;
 					read(mypolls.fds[n].fd, &c, 1);	// read just one byte , no need for error handling
@@ -860,36 +869,45 @@ void Standard_MySQL_Thread::run() {
 			continue;
 			}
 			if (mypolls.fds[n].revents==0) {
-
-				switch(myds->myds_type) {
-					case MYDS_BACKEND_NOT_CONNECTED:
-						myds_backend_set_failed_connect(myds,n);
-						break;
-					case MYDS_BACKEND_PAUSE_CONNECT:
-						myds_backend_set_failed_connect(myds,n);
-						break;
-					default:
+//		FIXME: this logic was removed completely because we added mariadb client library. Yet, we need to implement a way to manage connection timeout
+//				switch(myds->myds_type) {
+//					case MYDS_BACKEND_NOT_CONNECTED:
+//	if (curtime>mypolls.last_recv[n]+1000000) {
+//		proxy_error("connect() timeout . curtime: %llu , last_recv: %llu , failed after %lluus . fd: %d , myds_type: %s\n", curtime, mypolls.last_recv[n] , (curtime-mypolls.last_recv[n]) , myds->fd, (myds->myds_type==MYDS_BACKEND_PAUSE_CONNECT ? "MYDS_BACKEND_PAUSE_CONNECT" : "MYDS_BACKEND_NOT_CONNECTED" ) );
+//		myds->myds_type=MYDS_BACKEND_FAILED_CONNECT;
+//		myds->sess->pause=curtime+10000000;
+//		myds->sess->to_process=1;
+//	}
+//						
+//						break;
+//					case MYDS_BACKEND_NOT_CONNECTED:
+//						myds_backend_set_failed_connect(myds,n);
+//						break;
+//					case MYDS_BACKEND_PAUSE_CONNECT:
+//						myds_backend_set_failed_connect(myds,n);
+//						break;
+//					default:
 						//if (mypolls.fds[n].revents==0 && ( mypolls.myds[n]->myds_type!=MYDS_BACKEND_NOT_CONNECTED && mypolls.myds[n]->myds_type!=MYDS_BACKEND_PAUSE_CONNECT ) ) continue;
-						continue;
-						break;
-				}
-
+//						continue;
+//						break;
+//				}
+//
 			} else {
 				// check if the FD is valid
 				assert(mypolls.fds[n].revents!=POLLNVAL);
 				switch(myds->myds_type) {
-					case MYDS_BACKEND_NOT_CONNECTED:
-//			if (myds->myds_type==MYDS_BACKEND_NOT_CONNECTED && mypolls.fds[n].revents) {
-						if ( (mypolls.fds[n].revents & POLLERR) || (mypolls.fds[n].revents & POLLHUP) ) {
-							// error on connect
-							myds_backend_pause_connect(myds);
-							continue;
-						}
-						if (mypolls.fds[n].revents & POLLOUT) {
-							// first data on connect from a not blocking socket
-							myds_backend_first_packet_after_connect(myds, n);
-						}
-						break;
+//					case MYDS_BACKEND_NOT_CONNECTED:
+////			if (myds->myds_type==MYDS_BACKEND_NOT_CONNECTED && mypolls.fds[n].revents) {
+//						if ( (mypolls.fds[n].revents & POLLERR) || (mypolls.fds[n].revents & POLLHUP) ) {
+//							// error on connect
+//							myds_backend_pause_connect(myds);
+//							continue;
+//						}
+//						if (mypolls.fds[n].revents & POLLOUT) {
+//							// first data on connect from a not blocking socket
+//							myds_backend_first_packet_after_connect(myds, n);
+//						}
+//						break;
 					case MYDS_LISTENER:
 						// we got a new connection!
 						listener_handle_new_connection(myds,n);
@@ -918,8 +936,11 @@ void Standard_MySQL_Thread::run() {
 void Standard_MySQL_Thread::process_data_on_data_stream(MySQL_Data_Stream *myds, unsigned int n) {
 				mypolls.last_recv[n]=curtime;
 				myds->revents=mypolls.fds[n].revents;
-				myds->read_from_net();
-				myds->read_pkts();
+				if (mypolls.myds[n]->DSS < STATE_MARIADB_BEGIN || mypolls.myds[n]->DSS > STATE_MARIADB_END) {
+					// only if we aren't using MariaDB Client Library
+					myds->read_from_net();
+					myds->read_pkts();
+				}
 
 				if ( (mypolls.fds[n].events & POLLOUT) 
 						&&
@@ -1086,36 +1107,36 @@ void Standard_MySQL_Thread::unregister_session_connection_handler(int idx) {
 }
 
 
-void Standard_MySQL_Thread::myds_backend_set_failed_connect(MySQL_Data_Stream *myds, unsigned int n) {
-	if (curtime>mypolls.last_recv[n]+10000000) {
-		proxy_error("connect() timeout . curtime: %llu , last_recv: %llu , failed after %lluus . fd: %d , myds_type: %s\n", curtime, mypolls.last_recv[n] , (curtime-mypolls.last_recv[n]) , myds->fd, (myds->myds_type==MYDS_BACKEND_PAUSE_CONNECT ? "MYDS_BACKEND_PAUSE_CONNECT" : "MYDS_BACKEND_NOT_CONNECTED" ) );
-		myds->myds_type=MYDS_BACKEND_FAILED_CONNECT;
-		myds->sess->pause=curtime+10000000;
-		myds->sess->to_process=1;
-	}
-}
+//void Standard_MySQL_Thread::myds_backend_set_failed_connect(MySQL_Data_Stream *myds, unsigned int n) {
+//	if (curtime>mypolls.last_recv[n]+10000000) {
+//		proxy_error("connect() timeout . curtime: %llu , last_recv: %llu , failed after %lluus . fd: %d , myds_type: %s\n", curtime, mypolls.last_recv[n] , (curtime-mypolls.last_recv[n]) , myds->fd, (myds->myds_type==MYDS_BACKEND_PAUSE_CONNECT ? "MYDS_BACKEND_PAUSE_CONNECT" : "MYDS_BACKEND_NOT_CONNECTED" ) );
+//		myds->myds_type=MYDS_BACKEND_FAILED_CONNECT;
+//		myds->sess->pause=curtime+10000000;
+//		myds->sess->to_process=1;
+//	}
+//}
 
-void Standard_MySQL_Thread::myds_backend_pause_connect(MySQL_Data_Stream *myds) {
-	proxy_error("connect() error on fd %d . Pausing ...\n", myds->fd);
-	myds->myds_type=MYDS_BACKEND_PAUSE_CONNECT;
-	myds->sess->pause=curtime+10000000;
-	myds->sess->to_process=1;
-}
+//void Standard_MySQL_Thread::myds_backend_pause_connect(MySQL_Data_Stream *myds) {
+//	proxy_error("connect() error on fd %d . Pausing ...\n", myds->fd);
+//	myds->myds_type=MYDS_BACKEND_PAUSE_CONNECT;
+//	myds->sess->pause=curtime+10000000;
+//	myds->sess->to_process=1;
+//}
 
-void Standard_MySQL_Thread::myds_backend_first_packet_after_connect(MySQL_Data_Stream *myds, unsigned int n) {
-	int optval;
-	socklen_t optlen=sizeof(optval);
-	getsockopt(myds->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen);
-	if (optval==0) {
-		mypolls.last_recv[n]=curtime;
-		myds->myds_type=MYDS_BACKEND;
-		myds->sess->pause=0;
-	} else {
-		fprintf(stderr,"Connect() error\n");
-		myds->myds_type=MYDS_BACKEND_PAUSE_CONNECT;
-		myds->sess->pause=curtime+10000000;
-	}
-}
+//void Standard_MySQL_Thread::myds_backend_first_packet_after_connect(MySQL_Data_Stream *myds, unsigned int n) {
+//	int optval;
+//	socklen_t optlen=sizeof(optval);
+//	getsockopt(myds->fd, SOL_SOCKET, SO_ERROR, &optval, &optlen);
+//	if (optval==0) {
+//		mypolls.last_recv[n]=curtime;
+//		myds->myds_type=MYDS_BACKEND;
+//		myds->sess->pause=0;
+//	} else {
+//		fprintf(stderr,"Connect() error\n");
+//		myds->myds_type=MYDS_BACKEND_PAUSE_CONNECT;
+//		myds->sess->pause=curtime+10000000;
+//	}
+//}
 
 void Standard_MySQL_Thread::listener_handle_new_connection(MySQL_Data_Stream *myds, unsigned int n) {
 	int c;

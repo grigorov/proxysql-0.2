@@ -447,24 +447,63 @@ __exit_DSS__STATE_NOT_INITIALIZED:
 //	}
 
 	if (mybe && mybe->server_myds) {
+
+		if (mybe->server_myds->DSS > STATE_MARIADB_BEGIN && mybe->server_myds->DSS < STATE_MARIADB_END) {
+					MySQL_Data_Stream *myds=mybe->server_myds;
+					MySQL_Connection *myconn=mybe->server_myds->myconn;
+					int ms_status = 0;
+			switch (status) {
+				case CONNECTING_SERVER:
+    if (myds->revents & POLLIN) ms_status |= MYSQL_WAIT_READ;
+    if (myds->revents & POLLOUT) ms_status |= MYSQL_WAIT_WRITE;
+    if (myds->revents & POLLPRI) ms_status |= MYSQL_WAIT_EXCEPT;
+					if (ms_status) {
+						myconn->mysql_status = mysql_real_connect_cont(&myconn->mysql_ret, myconn->mysql, ms_status);
+						if (myconn->mysql_status==0) {
+							if (myconn->mysql_ret) {
+								//status=WAITING_CLIENT_DATA;
+
+		myds->myds_type=MYDS_BACKEND;
+                myds->DSS=STATE_READY;
+                //mybe->myconn=server_myds->myconn;
+                status=WAITING_SERVER_DATA;
+                unsigned int k;
+                PtrSize_t pkt2;
+                for (k=0; k<myds->PSarrayOUTpending->len;) {
+                        myds->PSarrayOUTpending->remove_index(0,&pkt2);
+                        myds->PSarrayOUT->add(pkt2.ptr, pkt2.size);
+                        myds->DSS=STATE_QUERY_SENT_DS;
+                }
+
+								//assert(0);
+							}
+						} 
+					}
+					break;
+				default:
+					assert(0);
+					break;
+			}
+		} else {
+
 		for (j=0; j<mybe->server_myds->PSarrayIN->len;) {
 			mybe->server_myds->PSarrayIN->remove_index(0,&pkt);
 
 		switch (status) {
-			case CONNECTING_SERVER:
-
-				switch (mybe->server_myds->DSS) {
-					case STATE_NOT_CONNECTED:
-						handler___status_CONNECTING_SERVER___STATE_NOT_CONNECTED(&pkt);
-						break;
-					case STATE_CLIENT_HANDSHAKE:
-						handler___status_CONNECTING_SERVER___STATE_CLIENT_HANDSHAKE(&pkt, &wrong_pass);
-						break;
-					default:
-						assert(0);
-
-				}
-				break;
+//			case CONNECTING_SERVER:
+//
+//				switch (mybe->server_myds->DSS) {
+//					case STATE_NOT_CONNECTED:
+//						handler___status_CONNECTING_SERVER___STATE_NOT_CONNECTED(&pkt);
+//						break;
+//					case STATE_CLIENT_HANDSHAKE:
+//						handler___status_CONNECTING_SERVER___STATE_CLIENT_HANDSHAKE(&pkt, &wrong_pass);
+//						break;
+//					default:
+//						assert(0);
+//
+//				}
+//				break;
 
 			case WAITING_SERVER_DATA:
 				switch (mybe->server_myds->DSS) {
@@ -521,6 +560,7 @@ __exit_DSS__STATE_NOT_INITIALIZED:
 		}
 
 		}
+	}
 	}
 
 	writeout();
@@ -929,74 +969,74 @@ void MySQL_Session::handler___status_WAITING_SERVER_DATA___STATE_EOF1(PtrSize_t 
 }
 
 
-void MySQL_Session::handler___status_CONNECTING_SERVER___STATE_NOT_CONNECTED(PtrSize_t *pkt) {
-	proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Statuses: CONNECTING_SERVER - STATE_NOT_CONNECTED\n");
-	if (mybe->server_myds->myprot.process_pkt_initial_handshake((unsigned char *)pkt->ptr,pkt->size)==true) {
-		l_free(pkt->size,pkt->ptr);
-		//myprot_server.generate_pkt_handshake_response(server_myds,true,NULL,NULL);
-		mybe->server_myds->myconn->userinfo->set(client_myds->myconn->userinfo);
-		mybe->server_myds->myprot.generate_pkt_handshake_response(true,NULL,NULL);
-		////status=WAITING_CLIENT_DATA;
-		mybe->server_myds->DSS=STATE_CLIENT_HANDSHAKE;
-	} else {
-		// FIXME: what to do here?
-		l_free(pkt->size,pkt->ptr);
-		//assert(0);
-		MyHGM->destroy_MyConn_from_pool(mybe->server_myds->myconn);
-		mybe->server_myds->myconn=NULL;
-		mybe->server_myds->fd=-1;
-		thread->mypolls.remove_index_fast(mybe->server_myds->poll_fds_idx);
-		mybe->server_myds->DSS=STATE_NOT_CONNECTED;
-		
-	}
-}
+//void MySQL_Session::handler___status_CONNECTING_SERVER___STATE_NOT_CONNECTED(PtrSize_t *pkt) {
+//	proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Statuses: CONNECTING_SERVER - STATE_NOT_CONNECTED\n");
+//	if (mybe->server_myds->myprot.process_pkt_initial_handshake((unsigned char *)pkt->ptr,pkt->size)==true) {
+//		l_free(pkt->size,pkt->ptr);
+//		//myprot_server.generate_pkt_handshake_response(server_myds,true,NULL,NULL);
+//		mybe->server_myds->myconn->userinfo->set(client_myds->myconn->userinfo);
+//		mybe->server_myds->myprot.generate_pkt_handshake_response(true,NULL,NULL);
+//		////status=WAITING_CLIENT_DATA;
+//		mybe->server_myds->DSS=STATE_CLIENT_HANDSHAKE;
+//	} else {
+//		// FIXME: what to do here?
+//		l_free(pkt->size,pkt->ptr);
+//		//assert(0);
+//		MyHGM->destroy_MyConn_from_pool(mybe->server_myds->myconn);
+//		mybe->server_myds->myconn=NULL;
+//		mybe->server_myds->fd=-1;
+//		thread->mypolls.remove_index_fast(mybe->server_myds->poll_fds_idx);
+//		mybe->server_myds->DSS=STATE_NOT_CONNECTED;
+//		
+//	}
+//}
 
-void MySQL_Session::handler___status_CONNECTING_SERVER___STATE_CLIENT_HANDSHAKE(PtrSize_t *pkt, bool *wrong_pass) {
-	proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Statuses: CONNECTING_SERVER - STATE_CLIENT_HANDSHAKE\n");
-	MySQL_Data_Stream *myds=mybe->server_myds;
-	if (myds->myprot.process_pkt_OK((unsigned char *)pkt->ptr,pkt->size)==true) {
-		l_free(pkt->size,pkt->ptr);
-		myds->DSS=STATE_READY;
-		//mybe->myconn=server_myds->myconn;
-		status=WAITING_SERVER_DATA;
-		unsigned int k;
-		PtrSize_t pkt2;
-		for (k=0; k<myds->PSarrayOUTpending->len;) {
-			myds->PSarrayOUTpending->remove_index(0,&pkt2);
-			myds->PSarrayOUT->add(pkt2.ptr, pkt2.size);
-			myds->DSS=STATE_QUERY_SENT_DS;
-		}
-		MySQL_Connection *myconn=myds->myconn;
-		// enable compression
-		if (myconn->options.server_capabilities & CLIENT_COMPRESS) {
-			if (myconn->options.compression_min_length) {
-				myconn->set_status_compression(true);
-			}
-		} else {
-			// explicitly disable compression
-			myconn->options.compression_min_length=0;
-			myconn->set_status_compression(false);
-		}
-		// set prepared statement processing
-		mybe->server_myds->myconn->processing_prepared_statement_prepare=client_myds->myconn->processing_prepared_statement_prepare;
-		if (session_fast_forward==true) {
-			status=FAST_FORWARD;
-			myds->DSS=STATE_READY;
-		}
-	} else {
-		proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Wrong credentials for backend: disconnecting\n");
-		l_free(pkt->size,pkt->ptr);	
-		*wrong_pass=true;
-		client_myds->setDSS_STATE_QUERY_SENT_NET();
-		char *_s=(char *)malloc(strlen(client_myds->myconn->userinfo->username)+100);
-		sprintf(_s,"Access denied for user '%s' (using password: %s)", client_myds->myconn->userinfo->username, (client_myds->myconn->userinfo->password ? "YES" : "NO"));
-		client_myds->myprot.generate_pkt_ERR(true,NULL,NULL,1,1045,(char *)"#28000", _s);
-		free(_s);
-		client_myds->DSS=STATE_SLEEP;
-		status=WAITING_CLIENT_DATA;
-		mybe->server_myds->myconn->reusable=false;
-	}
-}
+//void MySQL_Session::handler___status_CONNECTING_SERVER___STATE_CLIENT_HANDSHAKE(PtrSize_t *pkt, bool *wrong_pass) {
+//	proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Statuses: CONNECTING_SERVER - STATE_CLIENT_HANDSHAKE\n");
+//	MySQL_Data_Stream *myds=mybe->server_myds;
+//	if (myds->myprot.process_pkt_OK((unsigned char *)pkt->ptr,pkt->size)==true) {
+//		l_free(pkt->size,pkt->ptr);
+//		myds->DSS=STATE_READY;
+//		//mybe->myconn=server_myds->myconn;
+//		status=WAITING_SERVER_DATA;
+//		unsigned int k;
+//		PtrSize_t pkt2;
+//		for (k=0; k<myds->PSarrayOUTpending->len;) {
+//			myds->PSarrayOUTpending->remove_index(0,&pkt2);
+//			myds->PSarrayOUT->add(pkt2.ptr, pkt2.size);
+//			myds->DSS=STATE_QUERY_SENT_DS;
+//		}
+//		MySQL_Connection *myconn=myds->myconn;
+//		// enable compression
+//		if (myconn->options.server_capabilities & CLIENT_COMPRESS) {
+//			if (myconn->options.compression_min_length) {
+//				myconn->set_status_compression(true);
+//			}
+//		} else {
+//			// explicitly disable compression
+//			myconn->options.compression_min_length=0;
+//			myconn->set_status_compression(false);
+//		}
+//		// set prepared statement processing
+//		mybe->server_myds->myconn->processing_prepared_statement_prepare=client_myds->myconn->processing_prepared_statement_prepare;
+//		if (session_fast_forward==true) {
+//			status=FAST_FORWARD;
+//			myds->DSS=STATE_READY;
+//		}
+//	} else {
+//		proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Wrong credentials for backend: disconnecting\n");
+//		l_free(pkt->size,pkt->ptr);	
+//		*wrong_pass=true;
+//		client_myds->setDSS_STATE_QUERY_SENT_NET();
+//		char *_s=(char *)malloc(strlen(client_myds->myconn->userinfo->username)+100);
+//		sprintf(_s,"Access denied for user '%s' (using password: %s)", client_myds->myconn->userinfo->username, (client_myds->myconn->userinfo->password ? "YES" : "NO"));
+//		client_myds->myprot.generate_pkt_ERR(true,NULL,NULL,1,1045,(char *)"#28000", _s);
+//		free(_s);
+//		client_myds->DSS=STATE_SLEEP;
+//		status=WAITING_CLIENT_DATA;
+//		mybe->server_myds->myconn->reusable=false;
+//	}
+//}
 
 
 
@@ -1337,6 +1377,23 @@ void MySQL_Session::handler___client_DSS_QUERY_SENT___server_DSS_NOT_INITIALIZED
 		// we didn't get a valid connection, we need to create one
 		proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Sess=%p -- MySQL Connection has no FD\n", this);
 		int __fd;
+/* */
+		MySQL_Connection *myconn=mybe->server_myds->myconn;
+		myconn->mysql=mysql_init(NULL);
+		assert(myconn->mysql);
+		mysql_options(myconn->mysql, MYSQL_OPT_NONBLOCK, 0);
+		myconn->userinfo->set(client_myds->myconn->userinfo);
+		// FIXME: set client_flags
+		if (myconn->parent->port) {
+			myconn->mysql_status=mysql_real_connect_start(&myconn->mysql_ret,myconn->mysql, myconn->parent->address, myconn->userinfo->username, myconn->userinfo->password, myconn->userinfo->schemaname, myconn->parent->port, NULL, 0);  
+		} else {
+			myconn->mysql_status=mysql_real_connect_start(&myconn->mysql_ret,myconn->mysql, "localhost", myconn->userinfo->username, myconn->userinfo->password, myconn->userinfo->schemaname, myconn->parent->port, myconn->parent->address, 0);
+		}
+		myconn->fd=mysql_get_socket(myconn->mysql);
+		mybe->server_myds->fd=myconn->fd;
+		mybe->server_myds->DSS=STATE_MARIADB_CONNECTING;
+		status=CONNECTING_SERVER;
+/* 
 		__fd=mybe->server_myds->myds_connect(mybe->server_myds->myconn->parent->address, mybe->server_myds->myconn->parent->port, &pending_connect);
 
 		if (__fd==-1) {
@@ -1344,12 +1401,12 @@ void MySQL_Session::handler___client_DSS_QUERY_SENT___server_DSS_NOT_INITIALIZED
 			mybe->server_myds->myconn=NULL;
 			return;
 		}
-
 		mybe->server_myds->init((pending_connect==1 ? MYDS_BACKEND_NOT_CONNECTED : MYDS_BACKEND), this, __fd);
 		mybe->server_myds->myconn->reusable=true;
 		mybe->server_myds->myconn->fd=mybe->server_myds->fd;
 		status=CONNECTING_SERVER;
 		mybe->server_myds->DSS=STATE_NOT_CONNECTED;
+*/
 	} else {
 		proxy_debug(PROXY_DEBUG_MYSQL_CONNECTION, 5, "Sess=%p -- MySQL Connection found = %p\n", this, mybe->server_myds->myconn);
 		mybe->server_myds->assign_fd_from_mysql_conn();

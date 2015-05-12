@@ -701,7 +701,7 @@ int MySQL_Data_Stream::myds_connect(char *address, int connect_port, int *pendin
 			close(s);
 			return -1;
 		}
-		//*pending_connect=1;  // default
+		// *pending_connect=1;  // default
 		//myconn->myconn.net.fd=s; // FIXME: why here? // 20141011
 	} else {
 		*pending_connect=0;
@@ -715,7 +715,6 @@ int MySQL_Data_Stream::myds_connect(char *address, int connect_port, int *pendin
 	return s;
 
 }
-
 
 void MySQL_Data_Stream::move_from_OUT_to_OUTpending() {
 	unsigned int k;

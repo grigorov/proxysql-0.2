@@ -33,6 +33,9 @@ class MySQL_Connection {
 	unsigned long long inserted_into_pool;
 	public:
 	int fd;
+	MYSQL *mysql;
+	MYSQL *mysql_ret;
+	int mysql_status;
 	char scramble_buff[40];
 	struct {
 		uint32_t max_allowed_pkt;

@@ -87,6 +87,12 @@ enum mysql_data_stream_status {
 
 	STATE_READING_COM_STMT_PREPARE_RESPONSE,
 
+
+	STATE_MARIADB_BEGIN,  // dummy state
+	STATE_MARIADB_CONNECTING,  // using MariaDB Client Library
+
+	STATE_MARIADB_END,  // dummy state
+
 	STATE_END
 /*
 	STATE_ONE_STRING,

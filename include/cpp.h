@@ -4,7 +4,7 @@
 #include "mysql_backend.h"
 #include "mysql_data_stream.h"
 #include "query_cache.hpp"
-#include "mysql_connection.h"
+#include "MySQL_Connection.h"
 #include "sqlite3db.h"
 #include "simple_kv.h"
 #include "gen_utils.h"
