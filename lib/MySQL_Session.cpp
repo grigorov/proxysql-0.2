@@ -1387,6 +1387,10 @@ void MySQL_Session::handler___client_DSS_QUERY_SENT___server_DSS_NOT_INITIALIZED
 		mysql_options(myconn->mysql, MYSQL_OPT_NONBLOCK, 0);
 		myconn->userinfo->set(client_myds->myconn->userinfo);
 		// FIXME: set client_flags
+//		mybe->server_myds->myconn->connect_start();
+//		mybe->server_myds->fd=myconn->fd;
+	
+
 		if (myconn->parent->port) {
 			myconn->async_ready_status=mysql_real_connect_start(&myconn->mysql_ret,myconn->mysql, myconn->parent->address, myconn->userinfo->username, myconn->userinfo->password, myconn->userinfo->schemaname, myconn->parent->port, NULL, 0);  
 		} else {
@@ -1396,6 +1400,7 @@ void MySQL_Session::handler___client_DSS_QUERY_SENT___server_DSS_NOT_INITIALIZED
 		mybe->server_myds->fd=myconn->fd;
 		mybe->server_myds->DSS=STATE_MARIADB_CONNECTING;
 		status=CONNECTING_SERVER;
+
 /* 
 		__fd=mybe->server_myds->myds_connect(mybe->server_myds->myconn->parent->address, mybe->server_myds->myconn->parent->port, &pending_connect);
 

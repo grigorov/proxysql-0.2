@@ -103,6 +103,10 @@ class MySQL_Data_Stream
 	void set_net_failure();
 	void setDSS_STATE_QUERY_SENT_NET();
 
+	void setDSS(enum mysql_data_stream_status dss) {
+		DSS=dss;
+	}
+
 	int read_pkts();
 	int write_pkts();
 

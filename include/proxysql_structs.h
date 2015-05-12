@@ -93,6 +93,7 @@ enum mysql_data_stream_status {
 
 	STATE_MARIADB_PING_START,
 	STATE_MARIADB_PING_CONT,
+	STATE_MARIADB_PING_FAILURE,
 
 	STATE_MARIADB_END,  // dummy state
 

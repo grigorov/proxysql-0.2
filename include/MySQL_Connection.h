@@ -77,14 +77,36 @@ class MySQL_Connection {
 	bool get_status_user_variable();
 
 	// non blocking API
+	void connect_start() {
+		if (parent->port) {
+ 			async_ready_status=mysql_real_connect_start(&mysql_ret, mysql, parent->address, userinfo->username, userinfo->password, userinfo->schemaname, parent->port, NULL, 0);
+		} else {
+		  async_ready_status=mysql_real_connect_start(&mysql_ret, mysql, "localhost", userinfo->username, userinfo->password, userinfo->schemaname, parent->port, parent->address, 0);
+		}
+		fd=mysql_get_socket(mysql);
+	}
+/*
 	int ping_start() {
 		async_ready_status=mysql_ping_start(&async_ret, mysql);
-		return async_ready_status;
-	}
-	int ping_cont() {
-		async_ready_status=mysql_ping_cont(&async_ret, mysql, async_ready_status);
+		assert(myds==NULL);
+		myds->DSS=STATE_MARIADB_PING_START;
 		return async_ready_status;
 	}
 
+	int ping_cont() {
+		async_ready_status=mysql_ping_cont(&async_ret, mysql, async_ready_status);
+		assert(myds==NULL);
+		if (async_ready_status==0) {
+ 			if (async_ret==1) {
+				myds->DSS=STATE_SLEEP;
+			} else {
+				myds->setDSS(STATE_MARIADB_PING_FAILURE);
+			}
+		} else {
+			myds->setDSS(STATE_MARIADB_PING_CONT);
+		}
+		return async_ready_status;
+	}
+*/
 };
 #endif /* __CLASS_MYSQL_CONNECTION_H */

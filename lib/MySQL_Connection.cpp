@@ -197,3 +197,37 @@ bool MySQL_Connection::get_status_user_variable() {
 bool MySQL_Connection::get_status_prepared_statement() {
 	return status_flags & STATUS_MYSQL_CONNECTION_PREPARED_STATEMENT;
 }
+
+
+
+/*
+int MySQL_Connection::ping_start() {
+	async_ready_status=mysql_ping_start(&async_ret, mysql);
+	assert(myds==NULL);
+	myds->DSS=STATE_MARIADB_PING_START;
+	return async_ready_status;
+}
+
+int MySQL_Connection::ping_cont() {
+	async_ready_status=mysql_ping_cont(&async_ret, mysql, async_ready_status);
+	assert(myds==NULL);
+	if (async_ready_status==0) {
+		if (async_ret==1) {
+			myds->DSS=STATE_SLEEP;
+		} else {
+			myds->DSS=STATE_MARIADB_PING_FAILURE;
+		}
+	} else {
+		myds->DSS=STATE_MARIADB_PING_CONT;
+	}
+	return async_ready_status;
+}
+void MySQL_Connection::connect_start() {
+	if (parent->port) {
+		async_ready_status=mysql_real_connect_start(&mysql_ret, mysql, parent->address, userinfo->username, userinfo->password, userinfo->schemaname, parent->port, NULL, 0);
+	} else {
+		async_ready_status=mysql_real_connect_start(&mysql_ret, mysql, "localhost", userinfo->username, userinfo->password, userinfo->schemaname, parent->port, parent->address, 0);
+	}
+	fd=mysql_get_socket(mysql);
+}
+*/
