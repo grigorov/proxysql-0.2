@@ -91,6 +91,9 @@ enum mysql_data_stream_status {
 	STATE_MARIADB_BEGIN,  // dummy state
 	STATE_MARIADB_CONNECTING,  // using MariaDB Client Library
 
+	STATE_MARIADB_PING_START,
+	STATE_MARIADB_PING_CONT,
+
 	STATE_MARIADB_END,  // dummy state
 
 	STATE_END

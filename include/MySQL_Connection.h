@@ -35,7 +35,8 @@ class MySQL_Connection {
 	int fd;
 	MYSQL *mysql;
 	MYSQL *mysql_ret;
-	int mysql_status;
+	int async_ready_status;
+	int async_ret;
 	char scramble_buff[40];
 	struct {
 		uint32_t max_allowed_pkt;
@@ -74,5 +75,16 @@ class MySQL_Connection {
 	bool get_status_compression();
 	bool get_status_prepared_statement();
 	bool get_status_user_variable();
+
+	// non blocking API
+	int ping_start() {
+		async_ready_status=mysql_ping_start(&async_ret, mysql);
+		return async_ready_status;
+	}
+	int ping_cont() {
+		async_ready_status=mysql_ping_cont(&async_ret, mysql, async_ready_status);
+		return async_ready_status;
+	}
+
 };
 #endif /* __CLASS_MYSQL_CONNECTION_H */

@@ -636,8 +636,10 @@ MySQL_Session * Standard_MySQL_Thread::create_new_session_and_client_data_stream
 	//sess->myprot_client.dump_pkt=true;
 	sess->client_myds->myprot.dump_pkt=true;
 #endif
-	sess->client_myds->myconn=new MySQL_Connection();
-	MySQL_Connection *myconn=sess->client_myds->myconn;
+//	sess->client_myds->myconn=new MySQL_Connection();
+//	MySQL_Connection *myconn=sess->client_myds->myconn;
+	MySQL_Connection *myconn=new MySQL_Connection;
+	sess->client_myds->attach_connection(myconn);
 	//myconn=new MySQL_Connection();  // 20141011
 //	if (mysql_thread___have_compress) {
 //		myconn->options.compression_min_length=50;
@@ -790,7 +792,7 @@ void Standard_MySQL_Thread::run() {
 			if (mypolls.myds[n] && mypolls.myds[n]->myds_type!=MYDS_LISTENER && mypolls.myds[n]->myds_type!=MYDS_BACKEND_PAUSE_CONNECT) {
 				if (mypolls.myds[n]->DSS > STATE_MARIADB_BEGIN && mypolls.myds[n]->DSS < STATE_MARIADB_END) {
 					mypolls.fds[n].events = POLLIN;
-					if (mypolls.myds[n]->myconn->mysql_status & MYSQL_WAIT_WRITE)
+					if (mypolls.myds[n]->myconn->async_ready_status & MYSQL_WAIT_WRITE)
 						mypolls.fds[n].events |= POLLOUT;
 				} else {
 					mypolls.myds[n]->set_pollout();

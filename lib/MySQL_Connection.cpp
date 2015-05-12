@@ -112,7 +112,7 @@ MySQL_Connection::MySQL_Connection() {
 	fd=-1;
 	mysql=NULL;
 	mysql_ret=NULL;
-	mysql_status=0;
+	async_ready_status=0;
 	status_flags=0;
 	options.compression_min_length=0;
 	options.server_version=NULL;

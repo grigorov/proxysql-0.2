@@ -117,5 +117,19 @@ class MySQL_Data_Stream
 	void move_from_OUT_to_OUTpending();
 	unsigned char * resultset2buffer(bool);
 	void buffer2resultset(unsigned char *, unsigned int);
+
+	// safe way to attach a MySQL Connection
+	void attach_connection(MySQL_Connection *mc) {
+		myconn=mc;
+		mc->myds=this;
+	}
+
+	// safe way to detach a MySQL Connection
+	void detach_connection() {
+		assert(myconn==NULL);
+		myconn->myds=NULL;
+		myconn=NULL;
+	}
+
 };
 #endif /* __CLASS_MYSQL_DATA_STREAM_H */
